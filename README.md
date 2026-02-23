@@ -89,7 +89,7 @@ conda install pytorch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 cpuonly -c py
 
 新建项目，选择Conda，找到你创建的虚拟环境（若没有则重启电脑）
 
-![77183664381](D:\PyTorch_learning_document\img\1771836643811.png)
+![77183664381](img/1771836643811.png)
 
 
 
