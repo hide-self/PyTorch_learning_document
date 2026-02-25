@@ -1,17 +1,19 @@
-# PyTorch的引入
+# 一、PyTorch的引入
 
 
 
-## 官方文档网址
+## 1、官方文档网址
 
 学习指南：
+
 https://docs.pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html
 API文档：
+
 https://docs.pytorch.org/docs/stable/pytorch-api.html
 
 
 
-## PyTorch的典型应用领域
+## 2、PyTorch的典型应用领域
 
 - **计算机视觉（CV）**：图像分类、目标检测、生成模型（如 Stable Diffusion）。
 - **自然语言处理（NLP）**：Transformer、LLM（如 GPT、BERT 等）。
@@ -21,7 +23,7 @@ https://docs.pytorch.org/docs/stable/pytorch-api.html
 
 
 
-## PyTorch的用户级API
+## 3、PyTorch的用户级API
 
 PyTorch 是一个基于 Python 的科学计算库，它使用动态计算图（即“定义即运行”）机制，为深度学习研究和应用提供了灵活高效的实现。PyTorch 的用户级 API 主要分布在几个核心子模块中，包括 `torch`、`torch.nn`、`torch.optim`、`torch.utils.data` 等。下面分别介绍每个模块存放的主要功能。
 
@@ -86,7 +88,7 @@ PyTorch 是一个基于 Python 的科学计算库，它使用动态计算图（�
 
 
 
-## 环境配置
+## 4、环境配置
 
 我们使用Anaconda作为Python的包管理工具
 
@@ -195,7 +197,7 @@ print(device)
 
 
 
-## 实现一个简单的线性神经网络
+## 5、实现一个简单的线性神经网络
 
 实现一个简单的线性神经网络，网络函数为$y=2x+1$
 
@@ -276,7 +278,7 @@ print('训练结果:w:{0},b:{1}'.format(w,b))
 
 
 
-## Matplotlib可视化工具
+## 6、Matplotlib可视化工具
 
 在原来的简单线性神经网络的基础上添加图片可视化
 
@@ -359,4 +361,313 @@ plt.show()
 ![77193949159](img/1771939491598.png)
 
 
+
+
+
+# 二、PyTorch具体模块函数使用
+
+
+
+## 1、张量(Tensor)的定义与操作
+
+张量是一种特殊的数据结构，与Python中的列表或者numpy中的ndarry非常相似。
+
+在 PyTorch2 中，我们使用张量来定义模型的输入和输出，以及模型的参数。
+
+
+
+### 1-1、Tensor的定义与创建
+
+Tensor相当于多维列表，只不过操作起来效率比较高。
+
+
+
+**Tensor的维度表达方式举例：**
+
+(1,) :相当于1列的一维列表
+
+(3,4):相当于3行4列的二维列表
+
+(3,5,4):相当于3高5行4列的三维列表
+
+
+
+
+
+**Tensor的创建实例:**
+
+可以通过多种方式来创建张量，常见的有
+
+- 从可迭代对象创建（例如python的list，numpy的ndarray即np.array）
+- 使用 `torch.zeros` 创建全零张量
+- 使用 `torch.ones` 创建全一张量
+- 使用 `torch.rand` 创建随机张量
+
+下面是示例：
+
+```python
+import torch
+import numpy as np
+
+# 1.使用可迭代对象创建张量
+tensor_list=torch.tensor([[1,2,3],[3,4,5]]) # list创建
+tensor_ndarray=torch.tensor(np.array([[1,2],[1,1]]))    # ndarray创建
+
+# 2.创建全0张量
+tensor_allzero=torch.zeros(size=(2,3),dtype=float)
+print(tensor_allzero)
+# tensor([[0., 0., 0.],
+#         [0., 0., 0.]], dtype=torch.float64)
+
+# 3.创建全1张量
+tensor_allone=torch.ones(size=(1,2,3),dtype=int)
+print(tensor_allone)
+# tensor([[[1, 1, 1],
+#          [1, 1, 1]]])
+
+# 4.创建服从正态分布的随机张量，形状同tensor_allone
+tensor_rand=torch.randn(size=tensor_allone.size())
+print(tensor_rand)
+# tensor([[[ 0.4665, -1.6945, -0.5514],
+#          [-1.4522, -0.0440, -0.1852]]])
+
+```
+
+
+
+### 1-2、Tensor的四则运算
+
+Tensor内部的实现中做好了四则运算的运算符的重载
+
+```python
+import torch
+
+# 两个张量四则运算
+tensor_a = torch.tensor([1, 2, 3])
+tensor_b = torch.tensor([4, 5, 6])
+# 加
+sum_tensor = tensor_a + tensor_b
+print(sum_tensor)       # tensor([5, 7, 9])
+# 减
+sub_tensor = tensor_a - tensor_b
+print(sub_tensor)       # tensor([-3, -3, -3])
+# 乘
+product_tensor = tensor_a * tensor_b
+print(product_tensor)   # tensor([4, 10, 18])
+# 除
+div_tensor = tensor_a / tensor_b
+print(div_tensor)       # tensor([0.2500, 0.4000, 0.5000])
+
+
+```
+
+
+
+
+
+### 1-3、Tensor的矩阵乘法与转置
+
+Tensor支持矩阵的相关操作，比如：矩阵乘法、转置
+
+- Tensor使用torch.matmu函数也可以实现矩阵乘法
+- Tensor使用自己的属性.T就可以直接获得转置
+
+```python
+import torch
+
+# 1.矩阵乘法
+matrix_a = torch.tensor([[1, 2], [3, 4]])
+matrix_b = torch.tensor([[5, 6], [7, 8]])
+matrix_product = torch.matmul(matrix_a, matrix_b)
+print(matrix_product)
+# tensor([[19, 22],
+#         [43, 50]])
+
+# 2.矩阵转置
+matrix_c=torch.ones(size=(2,3),dtype=int)
+print(matrix_c)
+# tensor([[1, 1, 1],
+#         [1, 1, 1]])
+matrix_c_T=matrix_c.T
+print(matrix_c_T)
+# tensor([[1, 1],
+#         [1, 1],
+#         [1, 1]])
+```
+
+
+
+### 1-4、Tensor的拼接、切片、升降维
+
+本节介绍Tensor的三个维度操作：拼接、切片、拓维
+
+**1.Tensor的拼接**
+
+使用`torch.cat`，第一个参数传入由待拼接张量构成的元组，第二个参数传入dim拼接的维度
+
+
+
+**2.Tensor的切片**
+
+使用方括号运算符`[]`
+
+
+
+**3.Tensor的升维、降维操作**
+
+使用tensor.unsqueeze进行升维
+
+`torch.unsqueeze(input, dim)` 或 张量方法 `tensor.unsqueeze(dim)`，在指定的维度位置插入一个大小为 1 的新维度。
+
+参数：
+
+- `input`：输入的张量。
+- `dim`：要插入维度的位置。可以是整数，范围从 `0` 到 `input.dim()`（包含两端）或者 范围从 `-input.dim()` 到 `-1`（包含两端）。负数表示从后往前数。
+
+
+- 返回值：新张量，与原张量共享数据内存（即视图操作，不复制数据），但形状发生了变化。
+
+直观理解：
+
+假设有一个形状为 `(3, 4)` 的二维张量（矩阵），我们可以把它想象成 3 行 4 列的一个表格。
+
+- 在 `dim=0` 处插入维度，新形状变为 `(1, 3, 4)`，相当于在最外层加了一个“厚度为1”的壳。（1高3行4列）
+- 在 `dim=1` 处插入维度，新形状变为 `(3, 1, 4)`，相当于在行和列之间插入一个大小为1的维度。（3高1行4列）
+- 在 `dim=2` 处插入维度，新形状变为 `(3, 4, 1)`，相当于在最后一维之后加了一个大小为1的维度。（3高4行1列）
+
+
+
+使用tensor.squeeze进行降维：
+
+**torch.squeeze(input)** 或 **tensor.squeeze()**：移除所有大小为 1 的维度。
+
+举例：(3,1,2)=>(3,2) 、(3,1)=>(3,)
+
+```python
+import torch
+
+# 1.Tensor的拼接
+m_a=torch.tensor([[2,2,2],[2,2,2]])
+m_b=torch.tensor([[3,3,3],[3,3,3]])
+m_cat1=torch.cat((m_a,m_b),dim=0)   # 沿着列往下拼接
+m_cat2=torch.cat((m_a,m_b),dim=1)   # 沿着行往右拼接
+print(m_cat1)
+# tensor([[2, 2, 2],
+#         [2, 2, 2],
+#         [3, 3, 3],
+#         [3, 3, 3]])
+print(m_cat2)
+# tensor([[2, 2, 2, 3, 3, 3],
+#         [2, 2, 2, 3, 3, 3]])
+
+# 2.Tensor的切片
+m_d=torch.tensor([[1,2,3],[4,5,6]])
+m_cut=m_d[1:,0:2]   # 前面的是高维度
+print(m_cut)
+# tensor([[4, 5]])
+
+# 3.Tensor的升维与降维
+# 3.1.unsqueeze升维
+m_e=torch.tensor([[1,2,3],[4,5,6]])
+m_up=m_e.unsqueeze(dim=1)   # (2,3)->(2,1,3)
+print(m_up)
+# tensor([[[1, 2, 3]],
+#         [[4, 5, 6]]])
+
+# 3.2.squeeze降维
+m_f=torch.tensor([[1],[2],[3],[4]])
+m_down=m_f.squeeze()    # (3,1)->(3,)
+print(m_down)
+# tensor([1, 2, 3, 4])
+```
+
+
+
+
+
+## 2、自动微分（Autograd）与梯度优化
+
+在PyTorch2中， 自动微分（Autograd）机制， 是 PyTorch 的核心功能之一，用于自动计算张量的导数（梯度）。
+
+它的主要用途是：**在神经网络反向传播过程中自动计算参数的梯度**。
+
+在 PyTorch 中，只要一个张量的属性 `requires_grad=True`，系统就会跟踪它的所有运算，从而可以在反向传播时自动求出梯度。
+
+**基本原理**
+
+- **计算图（Computational Graph）**：
+  PyTorch 会动态构建一张有向无环图（DAG），图的节点是张量，边是函数（如加法、乘法等）。
+  反向传播时，PyTorch 会沿着这张图从输出向输入依次计算梯度。
+- **反向传播（Backpropagation）**：
+  调用 `loss.backward()` 时，PyTorch 会自动计算所有参与计算的 `requires_grad=True` 张量的梯度。
+- **梯度存储**：
+  计算出的梯度会存放在每个张量的 `.grad` 属性中。
+
+**简单示例**
+
+```python
+import torch
+
+# 创建一个张量并启用自动求导
+x = torch.tensor(3.0, requires_grad=True)
+
+# 构建一个函数 y = x^2
+y = x ** 2
+
+# 自动求导（反向传播）
+y.backward()
+
+# 查看梯度 dy/dx
+print(x.grad)  # 输出：tensor(6.)
+print(x.grad.item())
+```
+
+运行输出：
+
+```
+tensor(6.)
+6.0
+```
+
+
+
+**神经网络训练中使用 Autograd**
+
+```python
+import torch
+from torch import nn, optim
+
+# 1，构造训练数据：y=2x+1
+x = torch.linspace(-5, 5, 100).unsqueeze(1)  # 100的样本，维度[100,1]
+print(x, x.shape)
+y = 2 * x + 1 + torch.randn(x.size())  # 添加噪声
+
+# 2，定义简单的线性模型
+model = nn.Linear(1, 1)
+
+# 3, 定义损失函数与优化器
+criterion = nn.MSELoss()  # 均方误差
+optimizer = optim.SGD(model.parameters(), lr=0.01)
+
+# 4，训练模型
+epochs = 2000
+for epoch in range(epochs):
+    y_pred = model(x)  # 前向传播
+    loss = criterion(y_pred, y)  # 计算损失
+    optimizer.zero_grad()  # 清空梯度
+    loss.backward()  # 反向传播
+    optimizer.step()  # 更新参数
+
+    print(f'epoch: {epoch}, loss: {loss.item()}')
+
+# 5，查看结果
+[w, b] = model.parameters()
+print(f'训练结果：w: {w}, b: {b}')
+```
+
+**流程说明：**
+
+1. `forward()` 前向传播，构建计算图
+2. `loss.backward()` 反向传播，自动求出参数梯度
+3. `optimizer.step()` 更新模型参数
 
