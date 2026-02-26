@@ -671,3 +671,343 @@ print(f'训练结果：w: {w}, b: {b}')
 2. `loss.backward()` 反向传播，自动求出参数梯度
 3. `optimizer.step()` 更新模型参数
 
+
+
+
+## 3、数据集与数据加载
+
+在 PyTorch 的训练流程中，**数据读取与预处理** 通常分为两部分：
+
+- **Dataset（数据集类）**
+  负责**定义样本获取方式**，即“如何读一条数据”。
+
+- **DataLoader（数据加载器）**
+
+  负责**批量加载与并行加速**，即“如何读多条数据”。
+
+### 3_0_1、数据集类Dataset
+
+基本使用方式
+
+```python
+from torchvision import datasets
+from torchvision import transforms
+
+transform = transforms.Compose([
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),               # 将 PIL Image 或 numpy 转换为 Tensor，并缩放到 [0,1]
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
+
+train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+```
+
+
+
+
+
+### 3_0_2、数据加载器类DataLoader
+
+常用参数
+
+```python
+from torch.utils.data import DataLoader
+
+dataloader = DataLoader(
+    dataset,
+    batch_size=32,           # 每个 batch 的样本数
+    shuffle=True,            # 每个 epoch 是否打乱数据
+    sampler=None,            # 自定义采样策略（如果指定，则忽略 shuffle）
+    batch_sampler=None,      # 返回 batch 索引的采样器
+    num_workers=0,           # 加载数据使用的子进程数量（0 表示主进程加载）
+    collate_fn=None,         # 如何将多个样本合并成一个 batch
+    pin_memory=False,        # 是否将数据拷贝到 CUDA 固定内存（加速 GPU 传输）
+    drop_last=False,         # 当样本数不能被 batch_size 整除时，是否丢弃最后一个不完整的 batch
+    timeout=0,               # 数据加载超时时间
+    worker_init_fn=None      # 每个 worker 进程初始化时执行的函数
+)
+```
+
+
+
+基本使用方式
+
+```python
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=4)
+
+for images, labels in train_loader:
+    # images 形状: (batch_size, channels, height, width)
+    # labels 形状: (batch_size,)
+    output = model(images)
+    loss = criterion(output, labels)
+    ...
+```
+
+
+
+完整使用流程
+
+```python
+import torch
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms, datasets
+import torch.nn as nn
+
+# 1. 定义预处理
+transform = transforms.Compose([
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+])
+
+# 2. 加载内置数据集（或自定义）
+train_dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
+
+# 3. 创建 DataLoader
+train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=4, pin_memory=True)
+
+# 4. 定义模型、损失函数、优化器
+model = nn.Sequential(...).cuda()
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters())
+
+# 5. 训练循环
+for epoch in range(num_epochs):
+    for images, labels in train_loader:
+        images, labels = images.cuda(), labels.cuda()
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+```
+
+
+
+
+
+### 3-1、官方的数据集查看
+
+```python
+from torchvision import transforms
+from torchvision.datasets import CIFAR10
+from torch.utils.data import DataLoader
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 视觉处理
+transform=transforms.Compose([
+    transforms.Resize(size=224),
+    transforms.ToTensor(),
+])
+# transform=transforms.Compose([
+#     transforms.Resize(size=224),    # 转为大小为224*224
+#     transforms.RandomHorizontalFlip(),  # 图像增强：横向反转
+#     transforms.RandomCrop(size=224,padding=4),# 图像增强：随即裁剪，填充4
+#     transforms.ToTensor(),
+#     transforms.Normalize(
+#         mean=[0.485, 0.456, 0.406],
+#         std=[0.229, 0.224, 0.225]
+#     )
+# ])
+
+# 数据集对象
+train_data=CIFAR10(
+    root='./CIFAR10_data',  # 放在哪个目录下
+    train=True,             # 训练集为True，测试集为False
+    download=True,
+    transform=transform
+)
+
+# 数据加载器对象
+train_dataloader=DataLoader(
+    dataset=train_data,
+    batch_size=32,
+    shuffle=True,
+    num_workers=0
+)
+
+# 取出其中一簇放入b_x、b_y
+for step,(b_x,b_y) in enumerate(train_dataloader):
+    # b_x为一簇图片数据，b_y是标签名
+    if step>0:  # 只取出一簇，索引为1就结束
+        break
+
+
+batch_x = b_x.permute(0, 2, 3, 1).numpy()   # 形状从(batch,C,H,W)->(batch,H,W,C)
+batch_y=b_y.numpy()
+class_label=train_data.classes
+print('所有分类:',class_label)
+
+# 绘图
+plt.figure(figsize=(12, 5))
+for ii in np.arange(len(batch_y)):
+    plt.subplot(4, 8, ii + 1)   # 4行8列显示
+    plt.imshow(batch_x[ii, :, :])
+    plt.title(class_label[batch_y[ii]], size=10)
+    plt.axis("off")
+    plt.subplots_adjust(wspace=0.05)
+plt.show()
+```
+
+![77209506922](img/1772095069220.png)
+
+
+
+### 3-2、官方的数据加载器
+
+```
+from torchvision import transforms
+from torchvision.datasets import CIFAR10
+from torch.utils.data import DataLoader
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 视觉处理
+transform=transforms.Compose([
+    transforms.Resize(size=224),    # 转为大小为224*224
+    transforms.RandomHorizontalFlip(),  # 图像增强：横向反转
+    transforms.RandomCrop(size=224,padding=4),# 图像增强：随即裁剪，填充4
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
+])
+
+# 数据集对象
+train_data=CIFAR10(
+    root='./CIFAR10_data',  # 放在哪个目录下
+    train=True,             # 训练集为True，测试集为False
+    download=True,
+    transform=transform
+)
+
+# 数据加载器对象
+train_dataloader=DataLoader(
+    dataset=train_data,
+    batch_size=32,
+    shuffle=True,
+    num_workers=4
+)
+
+
+for imgs,label in train_dataloader:
+    print(imgs)
+    print(label)
+
+```
+
+
+
+### 3-3、自己的数据集查看
+
+自己的数据集结构：
+
+![77209639404](img/1772096394040.png)
+
+```python
+from torchvision import transforms
+from torchvision.datasets import ImageFolder
+from torch.utils.data import DataLoader
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 训练数据预处理(包含增强)
+train_transform = transforms.Compose([
+    transforms.Resize((224,224)),
+    transforms.ToTensor(),
+])
+
+# 加载训练集数据
+train_dataset = ImageFolder(
+    root='./mydata/train',
+    transform=train_transform
+)
+
+# 数据加载器对象
+train_dataloader=DataLoader(
+    dataset=train_dataset,
+    batch_size=32,
+    shuffle=True,
+    num_workers=0
+)
+
+# 取出其中一簇放入b_x、b_y
+for step,(b_x,b_y) in enumerate(train_dataloader):
+    # b_x为一簇图片数据，b_y是标签名
+    if step>0:  # 只取出一簇，索引为1就结束
+        break
+
+
+batch_x = b_x.permute(0, 2, 3, 1).numpy()   # 形状从(batch,C,H,W)->(batch,H,W,C)
+batch_y=b_y.numpy()
+class_label=train_dataset.classes
+print('所有分类:',class_label)
+
+# 绘图
+plt.figure(figsize=(12, 5))
+for ii in np.arange(len(batch_y)):
+    plt.subplot(4, 8, ii + 1)   # 4行8列显示
+    plt.imshow(batch_x[ii, :, :])
+    plt.title(class_label[batch_y[ii]], size=10)
+    plt.axis("off")
+    plt.subplots_adjust(wspace=0.05)
+plt.show()
+```
+
+
+
+![77209633000](img/1772096330005.png)
+
+
+
+### 3-4、自己的数据加载器
+
+```python
+from torchvision import transforms
+from torchvision.datasets import ImageFolder
+from torch.utils.data import DataLoader
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 训练数据预处理(包含增强)
+train_transform = transforms.Compose([
+    transforms.Resize(224),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomCrop(224, padding=4),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[0.687,0.589,0.430],
+        std=[0.298,0.293,0.340]
+    )
+])
+
+# 加载训练集数据
+train_dataset = ImageFolder(
+    root='./data/train',
+    transform=train_transform
+)
+
+# 数据加载器对象
+train_dataloader=DataLoader(
+    dataset=train_dataset,
+    batch_size=32,
+    shuffle=True,
+    num_workers=4
+)
+
+
+for imgs,labels in train_dataloader:
+    print(imgs)
+    print(labels)
+
+```
+
+
+
+
+
+
+
