@@ -857,7 +857,7 @@ plt.show()
 
 ### 3-2、官方的数据加载器
 
-```
+```python
 from torchvision import transforms
 from torchvision.datasets import CIFAR10
 from torch.utils.data import DataLoader
@@ -974,7 +974,7 @@ import matplotlib.pyplot as plt
 
 # 训练数据预处理(包含增强)
 train_transform = transforms.Compose([
-    transforms.Resize(224),
+    transforms.Resize((224,224)),
     transforms.RandomHorizontalFlip(),
     transforms.RandomCrop(224, padding=4),
     transforms.ToTensor(),
@@ -1009,5 +1009,528 @@ for imgs,labels in train_dataloader:
 
 
 
+# 三、PyTorch搭建神经网络
+
+## 1、全连接神经网络(FNN)
+
+### 1-1、FNN的结构
+
+- **输入层**：接受输入数据，传递到下一层。
+- **隐藏层**：进行数据处理的中间层，可能有多个。每一层都由神经元组成，每个神经元与前一层的所有神经元相连接。
+- **输出层**：根据任务的要求输出最终的预测结果。
+
+每个神经元通过加权求和后通过激活函数（如ReLU、Sigmoid、Tanh等）得到输出。模型的训练过程通过反向传播算法来优化参数。
+
+![77235291655](img/1772352916553.png)
 
 
+
+
+
+### 1-2、FNN处理鸢尾花多分类问题
+
+```python
+from sklearn.datasets import load_iris
+import torch
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# 加载数据集
+iris=load_iris()
+X=iris.data         # 150个样本 4个特征
+y=iris.target       # 3个类别（Setosa, Versicolor, Virginica）
+
+# 特征标准化
+scaler=StandardScaler()
+X_scaled=scaler.fit_transform(X)
+
+# 将数据集划分为训练集与测试集
+X_train,X_test,y_train,y_test=train_test_split(X_scaled,y,test_size=0.2,random_state=42)
+
+# 把数据转换成Tensor张量
+X_train=torch.tensor(X_train,dtype=torch.float32)
+y_train=torch.tensor(y_train,dtype=torch.long)
+X_test=torch.tensor(X_test,dtype=torch.float32)
+y_test=torch.tensor(y_test,dtype=torch.long)
+
+# 创建数据集和数据加载器
+train_dataset=torch.utils.data.TensorDataset(X_train,y_train)
+train_loader=torch.utils.data.DataLoader(train_dataset,batch_size=32,shuffle=True)
+test_dataset = torch.utils.data.TensorDataset(X_test, y_test)
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+# 定义全连接神经网络模型
+class FNN(torch.nn.Module):
+    def __init__(self,input_size,hidde_size,output_size):
+        super(FNN,self).__init__()
+        self.fc1=torch.nn.Linear(in_features=input_size,out_features=hidde_size)    # 输入层到隐藏层的全连接层
+        self.relu=torch.nn.ReLU()   # 激活函数
+        self.fc2=torch.nn.Linear(in_features=hidde_size,out_features=output_size)   # 隐藏层到输出层的全连接层
+
+    def forward(self,x):
+        x = self.fc1(x)  # 输入到隐藏层
+        x = self.relu(x)  # 激活函数
+        y = self.fc2(x)  # 隐藏层到输出层
+        return y
+
+# FNN内部参数规定
+input_size=4    # 输入特征数
+hidde_size=16   # 隐藏层节点数
+output_size=3   # 输出分类数
+
+# 模型实例化
+FNN_model=FNN(input_size=input_size,hidde_size=hidde_size,output_size=output_size)
+
+# 定义损失函数与优化器
+criterion=torch.nn.CrossEntropyLoss()   # 交叉熵损失函数
+optimizer=torch.optim.Adam(FNN_model.parameters(),lr=0.01)  # 优化器
+
+# 训练模型
+num_epochs=100
+for epoch in range(num_epochs):
+    FNN_model.train()   # 设置为训练模式
+    for inputs,labels in train_loader:
+        # 前向传播
+        outputs=FNN_model(inputs)
+        # 计算损失
+        loss=criterion(outputs,labels)
+        # 清空梯度
+        optimizer.zero_grad()
+        # 反向传播
+        loss.backward()
+        # 更新参数
+        optimizer.step()
+
+    # 输出当前轮次训练结果
+    print(f'当前轮次:{epoch+1}/{num_epochs}.损失:{loss.item():.4f}')
+
+# 测试模型
+FNN_model.eval()    # 设置模型为测试模式
+y_pred=[]
+y_true=[]
+with torch.no_grad():   # 禁用梯度计算(不用求导)
+    for inputs,labels in test_loader:
+        outputs=FNN_model(inputs)
+        predicted = torch.argmax(outputs, dim=1)  # 直接获取最大概率的索引
+        y_pred.extend(predicted.numpy())
+        y_true.extend(labels.numpy())
+
+# 计算准确率
+accuracy = accuracy_score(y_true, y_pred)
+print(f'Accuracy: {accuracy * 100:.2f}%')
+```
+
+结果截图:
+
+![77235649366](img/1772356493667.png)
+
+
+
+
+
+### 1-3、nn.Sequential简化FNN模型类
+
+以类定义方式太麻烦了，所以我们用Sequential简化FNN模型类
+
+```python
+# 原版:
+# 模型类定义
+class FNN(torch.nn.Module):
+    def __init__(self,input_size,hidde_size,output_size):
+        super(FNN,self).__init__()
+        self.fc1=torch.nn.Linear(in_features=input_size,out_features=hidde_size)    # 输入层到隐藏层的全连接层
+        self.relu=torch.nn.ReLU()   # 激活函数
+        self.fc2=torch.nn.Linear(in_features=hidde_size,out_features=output_size)   # 隐藏层到输出层的全连接层
+
+    def forward(self,x):
+        x = self.fc1(x)  # 输入到隐藏层
+        x = self.relu(x)  # 激活函数
+        y = self.fc2(x)  # 隐藏层到输出层
+        return y
+# 模型实例化
+FNN_model=FNN(input_size=input_size,hidde_size=hidde_size,output_size=output_size)
+   
+    
+    
+# 简化版:
+FNN_model=torch.nn.Sequential(
+    torch.nn.Linear(in_features=input_size,out_features=hidde_size),
+    torch.nn.ReLU(),
+    torch.nn.Linear(in_features=hidde_size,out_features=output_size)
+)
+```
+
+
+
+完整替换后的项目:
+
+```python
+from sklearn.datasets import load_iris
+import torch
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# 加载数据集
+iris=load_iris()
+X=iris.data         # 150个样本 4个特征
+y=iris.target       # 3个类别（Setosa, Versicolor, Virginica）
+
+# 特征标准化
+scaler=StandardScaler()
+X_scaled=scaler.fit_transform(X)
+
+# 将数据集划分为训练集与测试集
+X_train,X_test,y_train,y_test=train_test_split(X_scaled,y,test_size=0.2,random_state=42)
+
+# 把数据转换成Tensor张量
+X_train=torch.tensor(X_train,dtype=torch.float32)
+y_train=torch.tensor(y_train,dtype=torch.long)
+X_test=torch.tensor(X_test,dtype=torch.float32)
+y_test=torch.tensor(y_test,dtype=torch.long)
+
+# 创建数据集和数据加载器
+train_dataset=torch.utils.data.TensorDataset(X_train,y_train)
+train_loader=torch.utils.data.DataLoader(train_dataset,batch_size=32,shuffle=True)
+test_dataset = torch.utils.data.TensorDataset(X_test, y_test)
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+# FNN内部参数规定
+input_size=4    # 输入特征数
+hidde_size=16   # 隐藏层节点数
+output_size=3   # 输出分类数
+
+# 定义全连接神经网络模型
+FNN_model=torch.nn.Sequential(
+    torch.nn.Linear(in_features=input_size,out_features=hidde_size),
+    torch.nn.ReLU(),
+    torch.nn.Linear(in_features=hidde_size,out_features=output_size)
+)
+
+
+# 定义损失函数与优化器
+criterion=torch.nn.CrossEntropyLoss()   # 交叉熵损失函数
+optimizer=torch.optim.Adam(FNN_model.parameters(),lr=0.01)  # 优化器
+
+# 训练模型
+num_epochs=100
+for epoch in range(num_epochs):
+    FNN_model.train()   # 设置为训练模式
+    for inputs,labels in train_loader:
+        # 前向传播
+        outputs=FNN_model(inputs)
+        # 计算损失
+        loss=criterion(outputs,labels)
+        # 清空梯度
+        optimizer.zero_grad()
+        # 反向传播
+        loss.backward()
+        # 更新参数
+        optimizer.step()
+
+    # 输出当前轮次训练结果
+    print(f'当前轮次:{epoch+1}/{num_epochs}.损失:{loss.item():.4f}')
+
+# 测试模型
+FNN_model.eval()    # 设置模型为测试模式
+y_pred=[]
+y_true=[]
+with torch.no_grad():   # 禁用梯度计算(不用求导)
+    for inputs,labels in test_loader:
+        outputs=FNN_model(inputs)
+        predicted = torch.argmax(outputs, dim=1)  # 直接获取最大概率的索引
+        y_pred.extend(predicted.numpy())
+        y_true.extend(labels.numpy())
+
+# 计算准确率
+accuracy = accuracy_score(y_true, y_pred)
+print(f'Accuracy: {accuracy * 100:.2f}%')
+```
+
+结果截图：
+
+![77235698466](img/1772356984663.png)
+
+
+
+
+
+## 2、卷积神经网络(CNN)
+
+### 2-1、卷积神经网络结构
+
+CNN由多个不同层次的神经网络构成，每一层通过特定的操作提取图像或数据中的不同特征。主要的层包括：
+
+- **输入层（Input Layer）：**输入图像等信息
+- **卷积层（Convolutional Layer）**：这是CNN的核心部分，通过卷积操作提取输入数据（如图像）的局部特征。卷积操作是通过滤波器（或卷积核）对输入数据进行滑动，并计算每个位置的加权和，生成特征图。滤波器通常会学习到不同的图像特征，如边缘、纹理、颜色等。
+- **激活层（Activation Layer）**：通常在卷积层、全连接层之后添加激活函数（如ReLU函数），引入非线性因素，使得网络可以学习到更复杂的模式。
+- **池化层（Pooling Layer）**：池化操作的目的是减少数据的维度，从而减小计算量，同时保留重要的特征。最常见的池化操作是最大池化（Max Pooling）和平均池化（Average Pooling）。池化层通常用于减少图像尺寸（如2x2池化），降低计算负担。
+- **展平层(Flatten Layer)**：处于卷积层与全连接层中间，用于将多个卷积核展平后输入全连接层，起到承上启下的作用。
+- **全连接层（Fully Connected Layer）**：在卷积和池化层之后，通常会有一个或多个全连接层，用来将提取到的特征与最终的分类结果连接起来。全连接层通常用于最后的输出，例如图像分类的类别。
+- **输出层（Output Layer）**：最后一层用于输出最终的预测结果，例如图像分类中每个类别的概率分布。
+
+
+
+### 2-2、基于LeNet的CNN的手写数字识别
+
+LeNet卷积神经网络结构如下图所示：
+![77237016156](img/1772370161562.png)
+
+卷积层之后都需要接上sigmoid激活函数
+
+
+
+代码如下：
+
+```python
+import time
+import pandas as pd
+from torchvision import transforms,datasets
+from torch.utils.data import DataLoader
+from torch import nn
+import matplotlib.pyplot as plt
+import torch
+
+# 1.获取数据加载器
+def getdataloader(batch_size):
+    transform=transforms.Compose([
+        transforms.Resize(size=(28,28)),    # 裁剪大小为28*28
+        transforms.ToTensor(),  # 转为tensor
+        transforms.Normalize(   # 因为只有黑白，在转为张量后压缩到了[0.1]，此处我们把他标准正态化
+            mean=[0.5],
+            std=[0.5]
+        )
+    ])
+
+    # 训练集
+    train_dataset=datasets.MNIST(
+        root='./hand_num_data',
+        train=True,
+        transform=transform,
+        download=True
+    )
+    # 训练数据加载器
+    train_dataloader=DataLoader(
+        dataset=train_dataset,
+        batch_size=batch_size,
+        shuffle=True
+    )
+
+    # 测试集
+    test_dataset = datasets.MNIST(
+        root='./hand_num_data',
+        train=False,
+        transform=transform,
+        download=True
+    )
+    # 测试数据加载器
+    test_dataset = DataLoader(
+        dataset=test_dataset,
+        batch_size=32,
+        shuffle=True
+    )
+
+    all_classes=train_dataset.classes
+
+    return train_dataset,train_dataloader,all_classes
+
+# 2.LeNet模型
+class LeNet(nn.Module):
+    def __init__(self,output_size):
+        super(LeNet,self).__init__()
+        self.c1=nn.Conv2d(in_channels=1,out_channels=6,kernel_size=28,padding=2)
+        self.relu=nn.ReLU()    # 激活函数(论文原文是sigmoid，这里修改乘relu)
+        self.a=nn.AvgPool2d(kernel_size=14,stride=2)    # 平均池化层
+        self.c2=nn.Conv2d(in_channels=6,out_channels=16,kernel_size=5)
+        self.flatten=nn.Flatten()
+        self.f1=nn.Linear(in_features=5*5*16,out_features=120)
+        self.f2=nn.Linear(in_features=120,out_features=84)
+        self.f3=nn.Linear(in_features=84,out_features=output_size)
+
+    def forward(self,x):
+        x=self.c1(x)
+        x=self.relu(x)
+        x=self.a(x)
+        x=self.c2(x)
+        x=self.relu(x)
+        x=self.a(x)
+        x=self.flatten(x)
+        x=self.f1(x)
+        x=self.relu(x)
+        x=self.f2(x)
+        x = self.relu(x)
+        y=self.f3(x)
+        return y
+
+def train_epoch(model,train_loader,criterion,optimizer,device):
+    """训练一个epoch"""
+    model.train()
+    running_loss=0.0
+    correct=0
+    total=0
+
+    for batch_idx,(inputs,targets) in enumerate(train_loader):
+        inputs=inputs.to(device)
+        targets=targets.to(device)
+
+
+        outputs=model(inputs)
+        loss=criterion(outputs,targets)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        running_loss+=loss.item()
+        predicted=outputs.argmax(1)
+        total+=targets.size(0)
+        correct+=predicted.eq(targets).sum().item()
+
+    epoch_loss=running_loss/len(train_loader)
+    epoch_acc=100.*correct/total
+
+    return epoch_loss,epoch_acc
+
+
+def test_epoch(model,test_loader,criterion,device):
+    """验证一个epoch"""
+    model.eval()
+    test_loss=0.0
+    correct=0
+    total=0
+
+    with torch.no_grad():
+        for inputs,targets in test_loader:
+            inputs = inputs.to(device)
+            targets = targets.to(device)
+            outputs = model(inputs)
+            loss=criterion(outputs,targets)
+
+            test_loss+=loss.item()
+            predicted=outputs.argmax(1)
+            total+=targets.size(0)
+            correct += predicted.eq(targets).sum().item()
+
+    test_loss=test_loss/len(test_loader)
+    test_acc=100.*correct/total
+
+    return test_loss,test_acc
+
+
+def whole_train_test_process():
+    """训练与验证的完整过程"""
+    batch_size=32
+    learning_rate=0.01
+    epochs=20
+    device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    # 数据加载器
+    train_loader,test_loader,all_classes=getdataloader(batch_size=batch_size)
+
+    # 模型
+    model=LeNet(output_size=len(all_classes))
+    model=model.to(device)
+
+    # 损失函数
+    criterion=nn.CrossEntropyLoss()
+    # 优化器
+    optimizer = torch.optim.SGD(
+        model.parameters(),
+        lr=learning_rate,  # 增大学习率
+    )
+
+    # 记录训练过程
+    train_losses=[]
+    train_accuracies=[]
+    test_losses = []
+    test_accuracies = []
+    best_test_acc=100.*0.0
+    sum_time_use=0
+
+    print('开始训练手写数字LeNet模型...')
+
+    for epoch in range(epochs):
+        since = time.time()
+        print('-'*20)
+        print(f'当前轮次:{epoch+1}/{epochs}')
+
+        # 训练轮次
+        train_loss,train_acc=train_epoch(model,train_loader,criterion,optimizer,device)
+        # 验证轮次
+        test_loss,test_acc=test_epoch(model,test_loader,criterion,device)
+
+
+        # 记录训练、测试结果
+        train_losses.append(train_loss)
+        train_accuracies.append(train_acc)
+        test_losses.append(test_loss)
+        test_accuracies.append(test_acc)
+
+        print(f'训练损失:{train_loss:.4f},训练准确率:{train_acc:.2f}%')
+        print(f'测试损失: {test_loss:.4f}, 测试准确率: {test_acc:.2f}%')
+
+        # 保存最佳模型参数
+        if test_acc>best_test_acc:
+            best_test_acc=test_acc
+            # torch.save(model.state_dict(),'./best_model.pth')
+
+        # 计算训练和验证的耗时
+        time_use = time.time() - since
+        print("训练和验证耗费的时间{:.0f}m{:.0f}s".format(time_use // 60, time_use % 60))
+        sum_time_use += time_use
+
+    print("训练和验证耗费的总时间{:.0f}m{:.0f}s".format(sum_time_use // 60, sum_time_use % 60))
+    print(f"最佳测试准确率为:{best_test_acc}")
+
+    # 训练过程记录下来
+    train_process = pd.DataFrame(
+        data={
+            'epoch': range(1, epochs + 1),  # 训练轮次
+            'train_losses': train_losses,  # 训练集损失值列表
+            'test_losses': test_losses,  # 验证集损失值列表
+            'train_accuracies': train_accuracies,  # 训练集准确度列表
+            'test_accuracies': test_accuracies,  # 验证集准确度列表
+        }
+    )
+
+    return train_process
+
+def matplot_acc_loss(train_process):
+    plt.figure(figsize=(12,4))
+
+    plt.subplot(1,2,1)
+    plt.plot(train_process['epoch'],train_process['train_losses'],'ro-',label='train loss')
+    plt.plot(train_process['epoch'],train_process['test_losses'],'bs-',label='test loss')
+    plt.legend()    # 打开图例
+    plt.xlabel('epoch')
+    plt.ylabel('loss')
+
+    plt.subplot(1, 2, 2)
+    plt.plot(train_process['epoch'], train_process['train_accuracies'], 'ro-', label='train loss')
+    plt.plot(train_process['epoch'], train_process['test_accuracies'], 'bs-', label='test loss')
+    plt.legend()  # 打开图例
+    plt.xlabel('epoch')
+    plt.ylabel('acc')
+
+    plt.show()
+
+
+if __name__=='__main__':
+    train_process=whole_train_test_process()
+    matplot_acc_loss(train_process)
+
+```
+
+
+
+
+
+
+
+
+
+# 附录1：源码上传网址
+
+源码仓库地址：
+https://github.com/hide-self/PyTorch_Learning_Source_Code
