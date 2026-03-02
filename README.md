@@ -1524,7 +1524,420 @@ if __name__=='__main__':
 
 
 
+## 3、RNN循环神经网络
 
+### 3-1、RNN简介
+
+**3-1-1、什么是RNN**
+
+RNN（Recurrent Neural Network）是一类用于处理序列数据的神经网络。首先我们要明确什么是序列数据，摘取百度百科词条：时间序列数据是指在不同时间点上收集到的数据，这类数据反映了某一事物、现象等随时间的变化状态或程度。这是时间序列数据的定义，当然这里也可以不是时间，比如文字序列，但总归序列数据有一个特点——后面的数据跟前面的数据有关系。
+
+RNN是神经网络的一种，类似的还有深度神经网络DNN，卷积神经网络CNN，生成对抗网络GAN等等。RNN对具有序列特性的数据非常有效，它能挖掘数据中的时序信息以及语义信息，利用了RNN的这种能力，使深度学习模型在解决语音识别、语言模型、机器翻译以及时序分析等NLP领域的问题时有所突破。
+
+举几个具有序列特性的例子：
+
+- 拿人类的某句话来说，也就是人类的自然语言，是不是符合某个逻辑或规则的字词拼凑排列起来的，这就是符合序列特性。
+- 语音，我们发出的声音，每一帧每一帧的衔接起来，才凑成了我们听到的话，这也具有序列特性。
+- 股票，随着时间的推移，会产生具有顺序的一系列数字，这些数字也是具有序列特性。
+
+**3-1-2、为什么要发明RNN**
+
+我们先来看一个NLP很常见的问题，命名实体识别，举个例子，现在有两句话：
+
+第一句话：I like eating apple！（我喜欢吃苹果！）
+
+第二句话：The Apple is a great company！（苹果真是一家很棒的公司！）
+
+现在的任务是要给apple打Label，我们都知道第一个apple是一种水果，第二个apple是苹果公司，假设我们现在有大量的已经标记好的数据以供训练模型，当我们使用全连接的神经网络时，我们做法是把apple这个单词的特征向量输入到我们的模型中（如下图），在输出结果时，让我们的label里，正确的label概率最大，来训练模型，但我们的语料库中，有的apple的label是水果，有的label是公司，这将导致，模型在训练的过程中，预测的准确程度，取决于训练集中哪个label多一些，这样的模型对于我们来说完全没有作用。问题就出在了我们没有结合上下文去训练模型，而是单独的在训练apple这个单词的label，这也是全连接神经网络模型所不能做到的，于是就有了我们的循环神经网络。
+
+![1761718494471](img/1772460131145.png)
+
+**3-1-3、RNN的基础知识**
+
+**1、循环核介绍**
+
+循环核具有记忆力，通过不同时刻的参数共享，实现了对时间序列的信息提取
+
+![77246016790](img/1772460167906.png)
+
+
+
+
+
+**2、循环核按时间步展开**
+
+按时间步展开，就是把循环核按照时间轴方向展开。每个时刻记忆体状态信息ht被刷新，记忆体周围的参数矩阵wxh、whh和why是固定不变的。要训练优化的就是这些参数矩阵。训练完成后，使用效果最好的参数矩阵，执行前向传播，输出预测结果。循环神经网络，就是借助循环核提取时间特征后，送入全连接网络，实现连续数据的预测。
+
+![77246020217](img/1772460202177.png)
+
+
+
+**3、记忆体**
+
+循环核按照时间步展开后，可以发现，循环核是由多个记忆体构成，记忆体是循环神经网络储存历史状态信息的载体，每个记忆体都可以设定相应的个数，这个个数决定了记忆体可以存储历史状态信息的能力，记忆体个数越多，训练效果越好，但是由于记忆体的个数决定了参数矩阵的维度，因此记忆体个数越多，需要训练的参数量就越多，所需要消耗的资源就越大，训练时间就越长，因此需酌情评估。图中的例子中记忆体的个数为3，这个记忆体的个数，决定了ht的维度，进一步决定了Wxh、Whh以及Why的维度。
+
+![1761719058582](img/1772460238340.png)
+
+![1761719119473](img/1772460270496.png)
+
+**4、循环计算层**
+
+每个循环核构成一层循环计算层。循环计算层的层数是向输出方向增长的。
+
+![1761719418788](img/1772460303968.png)
+
+转载自：https://blog.csdn.net/qq_39439006/article/details/121554808
+
+
+
+### 3-2、通俗易懂理解RNN
+
+🧠 用一个生活比喻来理解RNN
+
+想象你在看电影时理解剧情的过程：
+
+- **传统神经网络**：像只看电影的一帧画面，不知道前后剧情
+- **循环神经网络**：像正常人看电影，能记住前面发生了什么，理解当前画面在整体剧情中的位置
+
+📚 什么是RNN？简单说就是"有记忆的神经网络"
+
+基本概念：
+
+- **普通神经网络**：每次分析都是"从零开始"，没有记忆
+- **RNN**：会"记住"之前看到的内容，用来帮助理解现在的内容
+
+就像：
+
+- 读句子时，你理解每个词的意思都依赖于前面的词
+- "我今天吃了苹果" vs "我买了苹果手机"
+- 同样的"苹果"，意思完全不同，需要前面的语境来理解
+
+🔄 RNN如何工作？"时间旅行"的神经网络
+
+核心机制：
+
+```
+输入 → [当前分析 + 之前记忆] → 输出 + 新记忆
+
+```
+
+**具体过程：**
+
+1. 收到新的输入（比如一个新词）
+2. 结合"刚才的记忆"来理解这个输入
+3. 产生输出（比如理解这个词的意思）
+4. 更新记忆，为下一个输入做准备
+
+举个读句子的例子：
+
+```
+句子："我爱" + "吃" + "苹果"
+
+```
+
+**第一步：看到"我爱"**
+
+- 记忆：空
+- 输出：这是一个关于喜好的句子
+- 新记忆：主题是"喜欢某物"
+
+**第二步：看到"吃"**
+
+- 记忆：主题是"喜欢某物"
+- 输出：喜欢与吃相关的东西
+- 新记忆：喜欢+吃 → 可能是食物
+
+**第三步：看到"苹果"**
+
+- 记忆：喜欢吃的食物
+- 输出：喜欢吃的苹果（水果）
+- 新记忆：完整的句子意思
+
+🏗️ RNN的三种主要类型
+
+1. **基础RNN** - 短期记忆型
+
+- 像金鱼，只能记住最近的一点信息
+- 简单但容易"忘记"太早的事情
+
+1. **LSTM** - 长期记忆高手 🎯
+
+- 像聪明的人，能选择性记住重要信息
+- 有三个"门"来控制记忆：
+  - **输入门**：决定什么新信息要记住
+  - **忘记门**：决定什么旧信息要忘记
+  - **输出门**：决定输出什么信息
+
+1. **GRU** - 简化版LSTM
+
+- 像LSTM的弟弟，简单但有效
+- 只有两个门，计算更快
+
+🌟 RNN的实际应用场景
+
+📝 文本相关：
+
+- **机器翻译**：理解整个句子再翻译
+- **聊天机器人**：记住对话历史
+- **文章生成**：写小说时保持情节连贯
+
+🎵 音频处理：
+
+- **语音识别**：根据前后语音判断当前词
+- **音乐生成**：创作连贯的旋律
+
+⏰ 时间序列：
+
+- **股票预测**：基于历史价格预测未来
+- **天气预报**：基于过去天气预测未来
+
+🆚 RNN vs 传统神经网络
+
+| 传统神经网络     | RNN                |
+| :--------------- | :----------------- |
+| 每次输入独立处理 | 考虑输入之间的关联 |
+| 像看单张照片     | 像看连续视频       |
+| 适合图片分类     | 适合语言、时间序列 |
+
+💡 举个更生活的例子：聊天对话
+
+**你问AI："今天天气怎么样？明天呢？"**
+
+**普通神经网络回答：**
+
+- "今天天气怎么样？" → "今天晴天"
+- "明天呢？" → "我不知道你在问什么"
+
+**RNN回答：**
+
+- "今天天气怎么样？" → "今天晴天"
+- "明天呢？" → "明天也是晴天" （记得你在问天气）
+
+⚠️ RNN的局限性
+
+主要问题：**记忆有限**
+
+- 就像人记不住太长的故事细节
+- 处理很长序列时，会"忘记"开头的内容
+
+**解决方案：**
+
+- **LSTM/GRU**：改善长序列记忆
+- **注意力机制**：让模型能"回头看"重要部分
+
+🎯 总结
+
+**RNN = 神经网络 + 记忆功能**
+
+- **核心价值**：能处理有顺序、有关联的数据
+- **关键思想**：当前理解依赖于历史信息
+- **适用场景**：任何需要"上下文"的任务
+
+就像人类理解语言需要上下文一样，RNN让AI也能具备这种"联系前后文"的能力！ 🚀
+
+
+
+### 3-3、循环神经网络（RNN）实例
+
+在PyTorch2中，`nn.RNN`是一个实现了基本循环神经网络（RNN）的类。它用于处理序列数据并进行时序预测任务。以下是`nn.RNN`的构造方法以及核心参数简介： 
+
+```python
+class torch.nn.RNN(
+    input_size: int,         # 输入特征的维度
+    hidden_size: int,        # 隐藏状态的维度
+    num_layers: int = 1,     # RNN层数
+    bias: bool = True,       # 是否使用偏置项
+    batch_first: bool = False,  # 如果True，输入和输出的维度将是(batch, seq, feature)
+    dropout: float = 0,      # 如果num_layers > 1，添加dropout
+    bidirectional: bool = False, # 是否使用双向RNN
+    nonlinearity: str = 'tanh' # 激活函数，'tanh' 或 'relu'
+)
+```
+
+核心参数解析
+
+1. **input_size**:
+   - 输入特征的维度。对于每个时间步，RNN接收的输入向量的大小。比如，在文本处理中，它可能是词向量的维度。
+2. **hidden_size**:
+   - 隐藏层的大小，即隐藏状态向量的维度。每个时间步的RNN都会生成一个隐藏状态，表示该时间步的记忆。这个值决定了隐藏状态的大小。
+3. **num_layers**:
+   - RNN的层数，默认为1。多层RNN通过将多个RNN层堆叠在一起实现。这个参数对模型的学习能力有影响，但也增加了计算的复杂度。
+4. **bias**:
+   - 是否使用偏置项。默认值为`True`，表示每个RNN层都会有一个偏置项。
+5. **batch_first**:
+   - 如果设置为`True`，输入和输出的维度顺序会变为`(batch, seq, feature)`，否则是`(seq, batch, feature)`。如果处理的数据集按批次组织，通常选择`batch_first=True`，使得数据处理更加直观。
+6. **dropout**:
+   - 如果`num_layers > 1`，这个参数会启用dropout，防止过拟合。它定义了每层之间的丢弃概率（dropout的比例）。默认值是`0`，表示不使用dropout。
+7. **bidirectional**:
+   - 是否使用双向RNN。如果设置为`True`，模型会同时考虑序列的正向和反向信息，这通常有助于提高性能，尤其是在长序列任务中。
+8. **nonlinearity**:
+   - 激活函数的类型。`'tanh'`是默认值，它会在每个时间步计算隐藏状态时应用`tanh`函数，帮助隐藏状态保持在[-1, 1]的范围内。也可以选择`'relu'`，这是另一种常用的激活函数。
+
+具体示例-猜数字小游戏
+
+```python
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+
+# 设置随机种子
+torch.manual_seed(42)
+
+
+class NumberGuessingRNN(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, num_layers=1):
+        super(NumberGuessingRNN, self).__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+
+        # 嵌入层 - 将数字转换为向量
+        self.embedding = nn.Embedding(input_size, hidden_size)
+
+        # RNN层
+        self.rnn = nn.RNN(hidden_size, hidden_size, num_layers, batch_first=True)
+
+        # 输出层
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x, hidden=None):
+        # 嵌入层
+        embedded = self.embedding(x)
+
+        # RNN层
+        if hidden is None:
+            rnn_out, hidden = self.rnn(embedded)
+        else:
+            rnn_out, hidden = self.rnn(embedded, hidden)
+
+        # 只取最后一个时间步的输出
+        last_output = rnn_out[:, -1, :]
+
+        # 全连接层
+        output = self.fc(last_output)
+
+        return output, hidden
+
+
+def generate_sequence_data(seq_length=5, num_samples=1000, max_num=20):
+    """生成数字序列数据"""
+    sequences = []
+    targets = []
+
+    for _ in range(num_samples):
+        # 生成随机起始数字
+        start = np.random.randint(0, max_num - seq_length)
+
+        # 创建序列 (例如: [3,4,5,6,7])
+        seq = [start + i for i in range(seq_length)]
+        sequences.append(seq)
+
+        # 目标是序列的下一个数字 (例如: 8)
+        target = start + seq_length
+        targets.append(target)
+
+    return np.array(sequences), np.array(targets)
+
+
+def train_model():
+    """训练模型"""
+    # 生成训练数据
+    sequences, targets = generate_sequence_data(seq_length=5, num_samples=10000, max_num=50)
+    print(sequences, len(sequences))
+    print(targets, len(targets))
+    # 转换为PyTorch张量
+    sequences_tensor = torch.tensor(sequences, dtype=torch.long)
+    targets_tensor = torch.tensor(targets, dtype=torch.long)
+
+    # 创建数据集
+    dataset = torch.utils.data.TensorDataset(sequences_tensor, targets_tensor)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True)
+
+    # 模型参数
+    input_size = 51  # 0-50
+    hidden_size = 64
+    output_size = 51  # 0-50
+    num_layers = 2
+
+    # 创建模型
+    model = NumberGuessingRNN(input_size, hidden_size, output_size, num_layers)
+
+    # 损失函数和优化器
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    # 训练循环
+    for epoch in range(100):
+        epoch_loss = 0
+        for batch_sequences, batch_targets in dataloader:
+            # 前向传播
+            outputs, _ = model(batch_sequences)
+            loss = criterion(outputs, batch_targets)
+
+            # 反向传播
+            optimizer.zero_grad()  # 清空梯度
+            loss.backward()  # 反向传播
+            optimizer.step()  # 更新参数
+
+            print(f'Epoch [{epoch}], Loss: {loss:.4f}')
+
+    return model
+
+
+def play_game(model, max_num=50):
+    """与训练好的模型玩猜数字游戏"""
+    model.eval()
+
+    print("\n=== 数字猜测游戏 ===")
+    print("规则: 输入一个数字序列，模型会预测下一个数字")
+    print(f"数字范围: 0-{max_num}")
+    print("输入'quit'退出游戏\n")
+
+    while True:
+        user_input = input("请输入一个递增的数字序列 (例如: 3 4 5 6 7): ")
+
+        if user_input.lower() == 'quit':
+            break
+
+        try:
+            # 解析输入
+            sequence = [int(num) for num in user_input.split()]
+
+            # 准备输入数据
+            input_tensor = torch.tensor([sequence], dtype=torch.long)
+
+            # 模型预测
+            with torch.no_grad():  # 禁用梯度计算
+                output, _ = model(input_tensor)  # 模型预测
+                predicted = torch.argmax(output, dim=1).item()  # 获取预测结果
+
+            # 显示结果
+            actual_next = sequence[-1] + 1
+            print(f"序列: {sequence}")
+            print(f"模型预测的下一个数字: {predicted}")
+            print(f"实际的下一个数字: {actual_next}")
+
+            if predicted == actual_next:
+                print("✅ 模型猜对了!")
+            else:
+                print("❌ 模型猜错了!")
+
+        except Exception as e:
+            print(f"发生错误: {e}")
+
+
+if __name__ == "__main__":
+    # 训练模型
+    print("开始训练模型...")
+    model = train_model()
+
+    # 玩游戏
+    play_game(model)
+```
+
+运行输出：
+
+![77246035099](img/1772460350994.png)
 
 
 
